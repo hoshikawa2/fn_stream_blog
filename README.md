@@ -38,7 +38,7 @@ At the end of this chain, we would have the application consuming the **Streamin
 
 The objective of this material will be to show how to implement a scalable event architecture that will allow processing large amounts of files through the use of Object Storage, Events, Functions and Streaming.
 
-![img.png](img.png)
+![img.png](images/img.png)
 
 ## Pre-Requisites
 
@@ -102,7 +102,7 @@ You can see your bucket created:
 
 You need to enable the bucket to emit events. So, enter on your bucket details and find the **Emit Object Events Edit** link and activate it. 
 
-![img_8.png](img_8.png)
+![img_8.png](images/img_8.png)
 
 ## Task 4 - Create your OCI Function
 
@@ -113,7 +113,7 @@ To execute the following steps, download code from here [OCI_Streaming_Claim_Che
 There are 2 codes here, the main code (HelloFunction.java) and the **OCI Streaming** producer code (Producer.java).
 
 **HelloFunction.java**
-![img_1.png](img_1.png)
+![img_1.png](images/img_1.png)
 
 In this part of code, we need to capture the data coming from the **OCI Events**, so there are 3 sources:
 
@@ -121,27 +121,27 @@ In this part of code, we need to capture the data coming from the **OCI Events**
 - **Event Data**: **OCI Events** produces data as **resourceName**.
 - **Additional Event Details Data**: **OCI Events** for Object Storage produces data as **namespace** and **bucketName**.
 
-![img_2.png](img_2.png)
+![img_2.png](images/img_2.png)
 
 So we can mount the **Object Storage File URL** 
 
-![img_3.png](img_3.png)
+![img_3.png](images/img_3.png)
 
 And the main code can pass the **URL** to the **OCI Streaming** producer:
 
-![img_4.png](img_4.png)
+![img_4.png](images/img_4.png)
 
 
 **Producer.java**
-![img_5.png](img_5.png)
+![img_5.png](images/img_5.png)
 
 This is the Message Class structure to produce the Kafka information for the **Claim-check** pattern. Just only **key** and **value**.
 
-![img_6.png](img_6.png)
+![img_6.png](images/img_6.png)
 
 And this is the basic code to produce to the streaming.
 
-![img_7.png](img_7.png)
+![img_7.png](images/img_7.png)
 
 ### Build and deploy the OCI Function
 
@@ -164,10 +164,10 @@ Let's configure an **Event Rule** to trigger your function to obtain the bucket 
 First, find
 
 Select the same compartment for your **Rule** and click on **Create Rule** button
-![img_10.png](img_10.png)
+![img_10.png](images/img_10.png)
 
 And fill the Condition as **Event Type**, Service Name as **Object Storage** and **Event Type** with Object-Create, Object-Delete and Object-Update values.
-![img_9.png](img_9.png)
+![img_9.png](images/img_9.png)
 
 **Rules Condition**
 
@@ -190,11 +190,11 @@ In the source code package ([OCI_Streaming_Claim_Check.zip](./files/OCI_Streamin
 
 You need to configure the code 
 
-![img_11.png](img_11.png)
+![img_11.png](images/img_11.png)
 
 After configure your stream parameters, you can run the code and verify the circuit **bucket -> event -> function -> streaming**
 
-![img_12.png](img_12.png)
+![img_12.png](images/img_12.png)
 
 ## Related Links
 
