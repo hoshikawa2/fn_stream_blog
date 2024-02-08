@@ -97,35 +97,71 @@ You can see your buckets created:
 
 ## Task 3 - Activate your Bucket for Events
 
+You need to enable the bucket to emit events. So, find the **Emit Object Events Edit** link and activate it. 
+
+![img_8.png](img_8.png)
+
 ## Task 4 - Create your OCI Function
 
 To execute the following steps, download code from here [OCI_Streaming_Claim_Check.zip](./files/OCI_Streaming_Claim_Check.zip).
 
 ### Understand the Code
 
+There are 2 codes here, the main code (HelloFunction.java) and the **OCI Streaming** producer code (Producer.java).
+
+**HelloFunction.java**
 ![img_1.png](img_1.png)
+
+In this part of code, we need to capture the data coming from the **OCI Events**, so there are 3 sources:
+
+- **Context**: This property came from RuntimeContext and we catch the **REGION** variable.
+- **Event Data**: **OCI Events** produces data as **resourceName**.
+- **Additional Event Details Data**: **OCI Events** for Object Storage produces data as **namespace** and **bucketName**.
 
 ![img_2.png](img_2.png)
 
+So we can mount the **Object Storage File URL** 
+
 ![img_3.png](img_3.png)
+
+And the main code can pass the **URL** to the **OCI Streaming** producer:
 
 ![img_4.png](img_4.png)
 
+
+**Producer.java**
 ![img_5.png](img_5.png)
 
+This is the Message Class structure to produce the Kafka information for the **Claim-check** pattern. Just only **key** and **value**.
+
 ![img_6.png](img_6.png)
+
+And this is the basic code to produce to the streaming.
 
 ![img_7.png](img_7.png)
 
 ### Build and deploy the OCI Function
 
-In this step, we will need to use the OCI CLI to create the OCI functions and deploy code into your tenancy. To create an OCI function, see OCI Functions QuickStart and search for Python option. You will need to create your function with this information:
+In this step, we will need to use the OCI CLI to create the OCI functions and deploy code into your tenancy. 
+To create an OCI function, see [Functions: Get Started using the CLI](https://docs.oracle.com/en-us/iaas/developer-tutorials/tutorials/functions/func-setup-cli/01-summary.htm), follow the steps and search for Java option. 
+You will need to create your function with this information:
 
-Application: ocistreaming-app
+    Application: ocistreaming-app
+    Context Variable: REGION=<your streaming region name, ex: us-ashburn-1>
 
-Remember the compartment you deployed your function. You will need this information to configure your OCI API Gateway deployment.
+Remember the compartment you deployed your function. You will need this information to configure your OCI Events.
 
 ## Task 5 - Configure the OCI Events
+
+Let's configure an **Event Rule** to trigger your function to obtain the bucket information and send it to the **OCI Streaming**.
+First, find
+
+Select the same compartment for your **Rule** and click on **Create Rule** button
+![img_10.png](img_10.png)
+
+And fill the Condition as **Event Type**, Service Name as **Object Storage** and **Event Type** with Object-Create, Object-Delete and Object-Update values.
+![img_9.png](img_9.png)
+
 ## Task 6 - Test your Circuit of Events
    bucket -> events -> function -> streaming
    Note: For private networks, the test code needs a bastion connected to the same private-subnet of your OCI Streaming
