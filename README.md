@@ -18,6 +18,11 @@ Often, in our applications, we need to process large quantities of files. In the
 
 In this material, you can see a very common way of processing large amounts of files, where applications can deposit their files in a bucket in **OCI Object Storage** and when these files are deposited, an event is generated allowing a function can be triggered to write the **URL** of this file to **Streaming**.
 
+
+###
+### Buckets -> Events -> Function -> Streaming -> Scalable Application
+###
+
 >**Note:** We could imagine this solution just with some source application saving the content of this files in **Streaming** while our application just reads this content, but it is not a good practice to transfer large volumes of data within a Kakfa queue. To do this, our approach will use a pattern called **Claim-Check**, which will do exactly as our proposal, instead of sending the file through the message queue, we will send the reference to this file. We will delegate reading the file to the application that will be in charge of processing it.
 
 Our solution would then feature these components:
@@ -37,6 +42,9 @@ The objective of this material will be to show how to implement a scalable event
 
 ## Pre-Requisites
 
+- VNC, Subnet(s) and all Securities configured for bucket, function and streaming
+- IAM User configured properly to manage buckets, events, function and streaming
+
 ## Task 1 - Create the OCI Streaming Instance
 
 Oracle Cloud Streaming is a Kafka like managed streaming service. You can develop applications using the Kafka APIs and common SDKs in the market.
@@ -44,13 +52,11 @@ So, in this demo, you will create an instance of Streaming and configure it to e
 
 First, you need to create an instance. Select the Oracle Cloud main menu e find the **Analytics & AI** option. So go to the **Streams**.
 
-Change the compartment to **analytics**. Every resource in this demo will be created on this compartment. This is more secure and easy to control IAM.
-
-So, click on **Create Stream** button:
+Select your **compartment** and click on **Create Stream** button:
 
 ![create-stream.png](./images/create-stream.png?raw=true)
 
-Fill the name with **kafka_like** (for example) and you could maintain all other parameters with the default values:
+Fill the name of your stream instance and you could maintain all other parameters with the default values:
 
 ![save-create-stream.png](./images/save-create-stream.png?raw=true)
 
@@ -58,6 +64,8 @@ So click the **Create** button to initialize the instance.
 Wait for the **Active** Status. Now you can use the instance.
 
 >**Note:** In the streaming creation process, you select as default **Auto-Create a default stream pool**, so you default pool will be create automatically.
+
+>**Note:** You can create your stream instance in a private subnet. In this case, attention for the function (see the function section in this material), it must be on the same private subnet or in a subnet that has access to the private subnet stream instance. Check your VCN, subnets, Security Lists, Service Gateway or other security components. Be sure that your function can access the streaming instance.
 
 Click on the **DefaultPool** link.
 ![default-pool-option.png](./images/default-pool-option.png?raw=true)
@@ -67,28 +75,23 @@ Let's view the connection setting:
 
 ![kafka-conn.png](./images/kafka-conn.png?raw=true)
 
-Annotate all these information. You will need them in next step.
+Annotate all these information. You will need them in nexts steps.
 
-Note: VCN for Private Subnet
 ## Task 2 - Create your Object Storage Bucket
 
 Now you need to create your bucket. Buckets are logical containers for storing objects, so all files used for this demo will be stored in this bucket.
-Go to the Oracle Cloud main menu and search for **Storage** and **Buckets**. In the Buckets section, select your compartment (analytics), created previously:
+Go to the Oracle Cloud main menu and search for **Storage** and **Buckets**. 
+In the Buckets section, select your compartment (could be the same as your streaming instance created previously):
 
 ![select-compartment.png](./images/select-compartment.png?raw=true)
 
-Click on the **Create Bucket** button. Create 4 buckets:
-
-    apps
-    data
-    dataflow-logs
-    Wallet
+Click on the **Create Bucket** button and give a name for your bucket:
 
 ![create-bucket.png](./images/create-bucket.png?raw=true)
 
-Just fill the **Bucket Name** information with these 4 buckets and maintain the other parameters with the default selection.
-For each bucket, click on the **Create** button.
-You can see your buckets created:
+Just fill the **Bucket Name** information and maintain the other parameters with the default selection.
+Click on the **Create** button.
+You can see your bucket created:
 
 ![buckets-dataflow.png](./images/buckets-dataflow.png?raw=true)
 
@@ -97,7 +100,7 @@ You can see your buckets created:
 
 ## Task 3 - Activate your Bucket for Events
 
-You need to enable the bucket to emit events. So, find the **Emit Object Events Edit** link and activate it. 
+You need to enable the bucket to emit events. So, enter on your bucket details and find the **Emit Object Events Edit** link and activate it. 
 
 ![img_8.png](img_8.png)
 
@@ -147,7 +150,11 @@ To create an OCI function, see [Functions: Get Started using the CLI](https://do
 You will need to create your function with this information:
 
     Application: ocistreaming-app
+    (follow the link Functions: Get Started using CLI)
+    fn create app ocistreaming-app --annotation oracle.com/oci/subnetIds='["<the same OCID of your streaming subnet>"]'
+    
     Context Variable: REGION=<your streaming region name, ex: us-ashburn-1>
+    fn config app ocistreaming-app REGION=us-ashburn-1
 
 Remember the compartment you deployed your function. You will need this information to configure your OCI Events.
 
@@ -162,6 +169,44 @@ Select the same compartment for your **Rule** and click on **Create Rule** butto
 And fill the Condition as **Event Type**, Service Name as **Object Storage** and **Event Type** with Object-Create, Object-Delete and Object-Update values.
 ![img_9.png](img_9.png)
 
+**Rules Condition**
+
+    Condition=Event Type
+    Service Name=Object Storage
+    Event Type=Object-Create, Object-Delete, Object-Update
+
+**Action**
+
+    Action Type=Functions
+    Function Compartment=<your function compartment name>
+    Function Application=<your function app, in this example ocistreaming-app>
+    Function=fn_stream
+
 ## Task 6 - Test your Circuit of Events
-   bucket -> events -> function -> streaming
-   Note: For private networks, the test code needs a bastion connected to the same private-subnet of your OCI Streaming
+
+>**Note:** For private networks, the test code needs to be executed in a bastion connected to the same private-subnet of your OCI Streaming
+
+In the source code package ([OCI_Streaming_Claim_Check.zip](./files/OCI_Streaming_Claim_Check.zip)), you can find a folder name monitoring and a file named **consume.py**. You can use this code to monitor and test if the solution works correctly.
+
+You need to configure the code 
+
+![img_11.png](img_11.png)
+
+After configure your stream parameters, you can run the code and verify the circuit **bucket -> event -> function -> streaming**
+
+![img_12.png](img_12.png)
+
+## Related Links
+
+- [Source-Code: OCI_Streaming_Claim_Check.zip](./files/OCI_Streaming_Claim_Check.zip)
+- [SDK for Java Streaming Quickstart](https://docs.oracle.com/en-us/iaas/Content/Streaming/Tasks/streaming-quickstart-oci-sdk-for-java.htm)
+- [Deploy an event-triggered serverless application](https://docs.oracle.com/en/solutions/event-triggered-serverless-app/index.html#GUID-B0BF9E73-C6E0-4A28-AA83-306BFB1F5FEB)
+- [Functions: Get Started using the CLI](https://docs.oracle.com/en-us/iaas/developer-tutorials/tutorials/functions/func-setup-cli/01-summary.htm)
+- [Overview of Object Storage](https://docs.oracle.com/en-us/iaas/Content/Object/Concepts/objectstorageoverview.htm)
+- [Object Storage IAM Policies](https://docs.oracle.com/en-us/iaas/Content/Security/Reference/objectstorage_security.htm#iam-policies)
+- [Streaming IAM Policies](https://docs.oracle.com/en-us/iaas/Content/Streaming/Concepts/streaminggettingstarted.htm#creating_stream_pools_iam)
+- [Events IAM Policies](https://docs.oracle.com/en-us/iaas/Content/Events/Concepts/eventspolicy.htm#Events_and_IAM_Policies)
+
+## Acknowledgments
+
+- **Author** - Cristiano Hoshikawa (Oracle LAD A-Team Solution Engineer)
